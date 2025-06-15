@@ -1,0 +1,196 @@
+name: Deploy to Scaleway
+
+on:
+  push:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build application
+      run: npm run build
+      
+    - name: Deploy to Scaleway
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: 51.15.211.20
+        username: ubuntu
+        key: ${{ secrets.SCALEWAY_SSH_KEY }}
+        script: |
+          # Installation automatique si première fois
+          if [ ! -f /var/www/av-concept-projects/installed ]; then
+            echo "🚀 Première installation détectée..."
+            
+            # Devenir root
+            sudo su - << 'INSTALL_SCRIPT'
+            
+            # Mise à jour système
+            apt update && apt upgrade -y
+            
+            # Installation Node.js 18
+            curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+            apt-get install -y nodejs
+            
+            # Installation PM2
+            npm install -g pm2
+            
+            # Installation Nginx
+            apt-get install -y nginx
+            
+            # Installation Certbot
+            apt-get install -y certbot python3-certbot-nginx
+            
+            # Création utilisateur deploy
+            if ! id "deploy" &>/dev/null; then
+                adduser --system --group --home /var/www --shell /bin/bash deploy
+            fi
+            
+            # Structure dossiers
+            mkdir -p /var/www/av-concept-projects/{current,releases,shared,logs}
+            mkdir -p /var/www/av-concept-projects/shared/{config,uploads}
+            chown -R deploy:deploy /var/www/av-concept-projects
+            usermod -aG www-data deploy
+            
+            # Configuration Nginx
+            rm -f /etc/nginx/sites-enabled/default
+            
+            cat > /etc/nginx/sites-available/av-concept-projects << 'EOF'
+          server {
+              listen 80;
+              server_name 51.15.211.20 _;
+              
+              access_log /var/log/nginx/av-concept-projects.access.log;
+              error_log /var/log/nginx/av-concept-projects.error.log;
+              
+              gzip on;
+              gzip_vary on;
+              gzip_min_length 1024;
+              gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
+              
+              add_header X-Frame-Options "SAMEORIGIN" always;
+              add_header X-XSS-Protection "1; mode=block" always;
+              add_header X-Content-Type-Options "nosniff" always;
+              
+              location / {
+                  proxy_pass http://localhost:3000;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection 'upgrade';
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+                  proxy_cache_bypass $http_upgrade;
+              }
+              
+              location /health {
+                  access_log off;
+                  return 200 "healthy\n";
+                  add_header Content-Type text/plain;
+              }
+          }
+          EOF
+            
+            ln -sf /etc/nginx/sites-available/av-concept-projects /etc/nginx/sites-enabled/
+            nginx -t
+            
+            # Firewall
+            ufw allow OpenSSH
+            ufw allow 'Nginx Full'
+            ufw --force enable
+            
+            # PM2 startup
+            sudo -u deploy pm2 startup systemd
+            env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u deploy --hp /var/www
+            
+            # Configuration PM2
+            cat > /var/www/av-concept-projects/shared/config/ecosystem.config.js << 'EOFPM2'
+          module.exports = {
+            apps: [{
+              name: 'av-concept-projects',
+              script: '/var/www/av-concept-projects/current/dist/index.js',
+              cwd: '/var/www/av-concept-projects/current',
+              instances: 1,
+              exec_mode: 'cluster',
+              watch: false,
+              max_memory_restart: '1G',
+              env: {
+                NODE_ENV: 'production',
+                PORT: 3000
+              },
+              error_file: '/var/www/av-concept-projects/logs/error.log',
+              out_file: '/var/www/av-concept-projects/logs/out.log',
+              log_file: '/var/www/av-concept-projects/logs/combined.log',
+              time: true
+            }]
+          };
+          EOFPM2
+            
+            chown deploy:deploy /var/www/av-concept-projects/shared/config/ecosystem.config.js
+            
+            # Redémarrage services
+            systemctl restart nginx
+            systemctl enable nginx
+            
+            # Marquer comme installé
+            touch /var/www/av-concept-projects/installed
+            
+            echo "✅ Installation serveur terminée !"
+            
+            INSTALL_SCRIPT
+          fi
+          
+          # Déploiement de l'application
+          echo "🚀 Déploiement de l'application..."
+          
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          RELEASE_DIR="/var/www/av-concept-projects/releases/$TIMESTAMP"
+          
+          # Création release
+          sudo mkdir -p $RELEASE_DIR
+          
+          # Clone et build
+          sudo git clone https://github.com/SachaAVCP/av-concept-projects.git $RELEASE_DIR
+          cd $RELEASE_DIR
+          sudo npm ci --production
+          sudo npm run build
+          
+          # Liens symboliques
+          sudo ln -sf /var/www/av-concept-projects/shared/config $RELEASE_DIR/config
+          sudo ln -sf /var/www/av-concept-projects/shared/uploads $RELEASE_DIR/uploads
+          
+          # Mise à jour current
+          sudo ln -sfn $RELEASE_DIR /var/www/av-concept-projects/current
+          
+          # Permissions
+          sudo chown -R deploy:deploy /var/www/av-concept-projects
+          
+          # Redémarrage app
+          sudo -u deploy pm2 delete av-concept-projects 2>/dev/null || true
+          sudo -u deploy pm2 start /var/www/av-concept-projects/shared/config/ecosystem.config.js
+          sudo -u deploy pm2 save
+          
+          # Redémarrage nginx
+          sudo systemctl reload nginx
+          
+          # Nettoyage
+          sudo find /var/www/av-concept-projects/releases -maxdepth 1 -type d | sort | head -n -5 | xargs rm -rf 2>/dev/null || true
+          
+          echo "✅ Déploiement terminé !"
+          echo "🌐 Application disponible sur : http://51.15.211.20"
+
