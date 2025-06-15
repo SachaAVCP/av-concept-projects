@@ -265,12 +265,12 @@ export default function Planning() {
               time: "Heure",
               event: "Événement",
               noEventsInRange: "Aucun événement dans cette période",
-              showMore: (total) => `+ ${total} de plus`
+              showMore: (total: number) => `+ ${total} de plus`
             }}
             formats={{
               monthHeaderFormat: 'MMMM YYYY',
               dayHeaderFormat: 'dddd DD MMMM',
-              dayRangeHeaderFormat: ({ start, end }) => 
+              dayRangeHeaderFormat: ({ start, end }: { start: Date, end: Date }) => 
                 `${moment(start).format('DD MMMM')} - ${moment(end).format('DD MMMM YYYY')}`
             }}
           />
