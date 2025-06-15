@@ -1,0 +1,63 @@
+{
+  "name": "av-concept-projects",
+  "version": "1.0.0",
+  "description": "Application de gestion de projets pour AV Concept Products - Systèmes audiovisuels home cinéma",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint . --ext ts,tsx --fix",
+    "type-check": "tsc --noEmit",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.20.1",
+    "react-big-calendar": "^1.8.5",
+    "date-fns": "^2.30.0",
+    "lucide-react": "^0.294.0",
+    "clsx": "^2.0.0",
+    "tailwind-merge": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.37",
+    "@types/react-dom": "^18.2.15",
+    "@typescript-eslint/eslint-plugin": "^6.10.0",
+    "@typescript-eslint/parser": "^6.10.0",
+    "@vitejs/plugin-react": "^4.1.1",
+    "autoprefixer": "^10.4.16",
+    "eslint": "^8.53.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.4",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^3.3.5",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.0",
+    "vitest": "^0.34.6"
+  },
+  "keywords": [
+    "react",
+    "typescript",
+    "vite",
+    "tailwindcss",
+    "project-management",
+    "home-cinema",
+    "audiovisual"
+  ],
+  "author": "AV Concept Products",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/[USERNAME]/av-concept-projects.git"
+  },
+  "bugs": {
+    "url": "https://github.com/[USERNAME]/av-concept-projects/issues"
+  },
+  "homepage": "https://github.com/[USERNAME]/av-concept-projects#readme"
+}
+
