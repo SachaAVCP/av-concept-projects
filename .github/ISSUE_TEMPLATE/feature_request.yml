@@ -1,0 +1,80 @@
+name: Feature Request
+description: Proposer une nouvelle fonctionnalité
+title: "[FEATURE] "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de proposer cette amélioration ! Veuillez remplir les informations ci-dessous.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problème à résoudre
+      description: Quel problème cette fonctionnalité résoudrait-elle ?
+      placeholder: Décrivez le problème ou le besoin...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Solution proposée
+      description: Description claire de la solution souhaitée
+      placeholder: Décrivez votre solution...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: module
+    attributes:
+      label: Module concerné
+      description: Quel module serait impacté ?
+      options:
+        - Dashboard
+        - Projets
+        - Planning
+        - Équipe
+        - Général
+        - Autre
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priorité
+      description: Quelle est l'urgence de cette fonctionnalité ?
+      options:
+        - Basse
+        - Moyenne
+        - Haute
+        - Critique
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considérées
+      description: Autres solutions envisagées
+      placeholder: Décrivez les alternatives...
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Contexte additionnel
+      description: Toute autre information utile
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: Vérifications
+      description: Confirmez que vous avez vérifié
+      options:
+        - label: J'ai vérifié qu'une issue similaire n'existe pas déjà
+          required: true
+        - label: Cette fonctionnalité est cohérente avec les objectifs du projet
+          required: true
+
